@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+        <PackageReference Include="MonoMod.RuntimeDetour" Version="25.0.0"/>
+    </ItemGroup>
+
 </Project>
