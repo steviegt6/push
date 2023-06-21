@@ -26,8 +26,8 @@ public sealed class LinuxPlatform : UnixPlatform {
             if (line.Contains("not found"))
                 break;
 
-            if (Directory.Exists(line)) {
-                osuPath = Path.Combine(line, "usr/bin/osu!.dll");
+            if (File.Exists(line)) {
+                osuPath = line;
                 break;
             }
         }
@@ -47,18 +47,20 @@ public sealed class LinuxPlatform : UnixPlatform {
 
         processes.Add(osuMountProc);
 
-        var osuMountOutput = osuMountProc.GetNonTerminatingOutput();
+        string? osuMountOutput = null!;
+        while (!osuMountProc.StandardOutput.EndOfStream) {
+            string? o = osuMountProc.StandardOutput.ReadLine();
+
+            if (!string.IsNullOrEmpty(o)) {
+                osuMountOutput = o;
+                break;
+            }
+        }
+
         if (osuMountOutput is null)
             throw new Exception($"Unable to mount AppImage: '{osuPath}'.");
 
-        foreach (var line in osuMountOutput) {
-            if (string.IsNullOrEmpty(line))
-                continue;
-
-            return Path.Combine(line, "usr/bin/osu!.dll");
-        }
-
-        throw new Exception($"Failed to mount AppImage, directory not provided: '{osuPath}'.");
+        return Path.Combine(osuMountOutput, "usr/bin/osu!.dll");
     }
 
     protected override void Dispose(bool disposing) {
