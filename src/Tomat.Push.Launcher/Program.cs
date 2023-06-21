@@ -36,7 +36,9 @@ public static class Program {
             Path.GetDirectoryName(typeof(Program).Assembly.Location)!
         );
 
-        var mods = ModOrganizer.LoadModsFromDirectory(modsPath, launcherResolver);
+        var launcherMod = new Mod(typeof(Program).Assembly, AssemblyLoadContext.Default, launcherResolver);
+
+        var mods = ModOrganizer.LoadModsFromDirectory(modsPath, launcherResolver, launcherMod);
 
         var anyMods = mods.Count > 0;
         var singleMod = mods.Count == 1;

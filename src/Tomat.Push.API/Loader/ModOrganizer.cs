@@ -37,7 +37,7 @@ public sealed class Mod {
 
     public List<ModIdentity> Dependencies { get; } = new();
 
-    internal Mod(Assembly assembly, AssemblyLoadContext loadContext, AssemblyResolver resolver) {
+    public Mod(Assembly assembly, AssemblyLoadContext loadContext, AssemblyResolver resolver) {
         Assembly = assembly;
         LoadContext = loadContext;
         Resolver = resolver;
@@ -55,9 +55,11 @@ public sealed class Mod {
 }
 
 public static class ModOrganizer {
-    public static List<Mod> LoadModsFromDirectory(string modDirectory, AssemblyResolver loaderResolver) {
+    public static List<Mod> LoadModsFromDirectory(string modDirectory, AssemblyResolver loaderResolver, Mod loaderMod) {
         var directories = Directory.GetDirectories(modDirectory);
-        var mods = new Dictionary<string, Mod>();
+        var mods = new Dictionary<string, Mod> {
+            { loaderMod.Name, loaderMod },
+        };
 
         foreach (var directory in directories) {
             var modName = Path.GetFileName(directory);
@@ -106,7 +108,7 @@ public static class ModOrganizer {
                     continue;
 
                 var instance = Activator.CreateInstance(type)!;
-                
+
                 if (instance is IModInitializer initializer)
                     mod.Initializers.Add(initializer);
 

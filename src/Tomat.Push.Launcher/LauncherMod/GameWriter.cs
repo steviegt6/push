@@ -13,14 +13,12 @@ public sealed class GameWriter : IModuleRewriter {
     private static Version? osuVersion;
 
     bool IModuleRewriter.RewriteModule(ModuleDefinition module) {
-        if (module.Name == "osu!") {
-            var versionAttribute = module.CustomAttributes.First(x => x.AttributeType.Name == "AssemblyVersionAttribute");
-            var version = versionAttribute.ConstructorArguments[0].Value as string;
-            osuVersion = Version.Parse(version ?? "0.0.0.0");
+        if (module.Assembly.Name.Name == "osu!") {
+            osuVersion = module.Assembly.Name.Version;
             return false;
         }
 
-        if (module.Name != "osu.Game")
+        if (module.Assembly.Name.Name != "osu.Game")
             return false;
 
         var osuGameBase = module.GetType("osu.Game.OsuGameBase");
