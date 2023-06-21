@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.Loader;
 
-namespace Tomat.Push.API.Loader; 
+namespace Tomat.Push.API.Loader;
 
 public sealed class ModAssemblyLoadContext : AssemblyLoadContext {
     internal ModAssemblyLoadContext(string name) : base(name) { }
