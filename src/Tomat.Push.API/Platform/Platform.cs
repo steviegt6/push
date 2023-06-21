@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace Tomat.Push.API.Platform; 
+namespace Tomat.Push.API.Platform;
 
 public abstract class Platform : IPlatform {
     public virtual string GetSaveDirectory(string name) {
@@ -10,7 +10,7 @@ public abstract class Platform : IPlatform {
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
                 return Path.Combine(path, name);
         }
-        
+
         throw new DirectoryNotFoundException("Could not find a valid save directory.");
     }
 
@@ -19,4 +19,13 @@ public abstract class Platform : IPlatform {
     }
 
     public abstract string? LocateGamePath();
+
+    protected virtual void Dispose(bool disposing) {
+        if (disposing) { }
+    }
+
+    public void Dispose() {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 }

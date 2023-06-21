@@ -1,9 +1,11 @@
-﻿namespace Tomat.Push.API.Platform;
+﻿using System;
+
+namespace Tomat.Push.API.Platform;
 
 /// <summary>
 ///     Represents a platform.
 /// </summary>
-public interface IPlatform {
+public interface IPlatform : IDisposable {
     string GetSaveDirectory(string name);
     
     /// <summary>

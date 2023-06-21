@@ -88,68 +88,12 @@ internal class OsuAlc : AssemblyLoadContext {
 public static class Program {
     private static Process mountProc = null!;
     private static Assembly osuDesktopAssembly = null!;
-    public static string osuDllPath = null!;
     public static string osuRoot = null!;
 
     private static List<Assembly> mods = null!;
     private static Dictionary<Type, object> rewriters = null!;
 
     public static Version OsuVersion() => osuDesktopAssembly.GetName().Version ?? new();
-
-    private static string LinuxPath() {
-        string osuPath = "";
-        Process proc = Process.Start(new ProcessStartInfo {
-            FileName = "which",
-            Arguments = "osu-lazer",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-        })!;
-        string? o = null;
-
-        while (!proc.StandardOutput.EndOfStream) {
-            o = proc.StandardOutput.ReadLine();
-
-            if (Directory.Exists(o))
-                break;
-        }
-
-        proc.WaitForExit();
-
-        if (!string.IsNullOrEmpty(o) && !o.Contains("not found"))
-            osuPath = o!;
-
-        if (string.IsNullOrEmpty(osuPath)) {
-            Console.Write("The osu-lazer appimage is not on the path, please enter the path to your osu-lazer appimage:");
-            string? i;
-            while ((i = Console.ReadLine()) == null && File.Exists(i))
-                Console.Write("Invalid input. Try again: ");
-
-            osuPath = i!;
-        }
-
-        mountProc = Process.Start(new ProcessStartInfo {
-            FileName = osuPath,
-            Arguments = "--appimage-mount",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-        })!;
-
-        while (!mountProc.StandardOutput.EndOfStream) {
-            o = mountProc.StandardOutput.ReadLine();
-            if (!string.IsNullOrEmpty(o))
-                return Path.Combine(o, "usr/bin/osu!.dll");
-        }
-
-        throw new System.Exception("Unable to mount appimage " + osuPath);
-    }
-
-    private static string WindowsPath() {
-        return "";
-    }
-
-    private static string MacPath() {
-        throw new System.NotImplementedException("Mac is not supported!");
-    }
 
     private static List<Assembly> GetModAssemblies(string modsPath, AssemblyLoadContext ctx) {
         List<Assembly> ret = new();
