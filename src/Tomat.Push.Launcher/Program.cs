@@ -9,6 +9,10 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using Tomat.Push.API;
+using Tomat.Push.API.Platform;
+using Tomat.Push.API.Platform.Linux;
+using Tomat.Push.API.Platform.Mac;
+using Tomat.Push.API.Platform.Windows;
 
 namespace Tomat.Push.Launcher;
 
@@ -23,7 +27,10 @@ internal class OsuResolver : IAssemblyResolver {
             return resolver.Resolve(name);
 
         Console.WriteLine("[push] Assembly " + name.Name + " found at " + dllPath);
-        ModuleDefinition md = ModuleDefinition.ReadModule(dllPath, new ReaderParameters { AssemblyResolver = this });
+        ModuleDefinition md = ModuleDefinition.ReadModule(dllPath,
+                                                          new ReaderParameters {
+                                                              AssemblyResolver = this
+                                                          });
         if (Program.RewriteModule(md))
             return md.Assembly;
         else
@@ -53,7 +60,10 @@ internal class OsuAlc : AssemblyLoadContext {
             return alc.LoadFromAssemblyName(assemblyName);
 
         Console.WriteLine("[push] Assembly " + assemblyName.Name + " found at " + dllPath);
-        ModuleDefinition md = ModuleDefinition.ReadModule(dllPath, new ReaderParameters { AssemblyResolver = mdResolver });
+        ModuleDefinition md = ModuleDefinition.ReadModule(dllPath,
+                                                          new ReaderParameters {
+                                                              AssemblyResolver = mdResolver
+                                                          });
 
         if (assemblyName.Name == "osu.Game") {
             Console.WriteLine("[push] osu.Game patched!");
@@ -80,41 +90,6 @@ public static class Program {
     private static Assembly osuDesktopAssembly = null!;
     public static string osuDllPath = null!;
     public static string osuRoot = null!;
-    private static string _modsPath = null!;
-    private static string modsPath {
-        get {
-            if (!string.IsNullOrEmpty(_modsPath))
-                return _modsPath;
-
-            if (OperatingSystem.IsWindows())
-                _modsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "push", "mods");
-            else if (OperatingSystem.IsMacOS()) {
-                string aps = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Library", "Application Support");
-                if (Directory.Exists(aps))
-                    _modsPath = Path.Combine(aps, "push", "mods");
-                else {
-                    string? xdgData = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
-
-                    if (!string.IsNullOrEmpty(xdgData))
-                        _modsPath = Path.Combine(xdgData, "push", "mods");
-                    else
-                        _modsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), ".local", "share", "push", "mods");
-                }
-            }
-            else if (OperatingSystem.IsLinux()) {
-                string? xdgData = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
-
-                if (!string.IsNullOrEmpty(xdgData))
-                    _modsPath = Path.Combine(xdgData, "push", "mods");
-                else
-                    _modsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), ".local", "share", "push", "mods");
-            }
-            else
-                throw new System.NotImplementedException();
-
-            return _modsPath;
-        }
-    }
 
     private static List<Assembly> mods = null!;
     private static Dictionary<Type, object> rewriters = null!;
@@ -130,12 +105,14 @@ public static class Program {
             RedirectStandardOutput = true,
         })!;
         string? o = null;
+
         while (!proc.StandardOutput.EndOfStream) {
             o = proc.StandardOutput.ReadLine();
 
             if (Directory.Exists(o))
                 break;
         }
+
         proc.WaitForExit();
 
         if (!string.IsNullOrEmpty(o) && !o.Contains("not found"))
@@ -156,6 +133,7 @@ public static class Program {
             UseShellExecute = false,
             RedirectStandardOutput = true,
         })!;
+
         while (!mountProc.StandardOutput.EndOfStream) {
             o = mountProc.StandardOutput.ReadLine();
             if (!string.IsNullOrEmpty(o))
@@ -175,6 +153,7 @@ public static class Program {
 
     private static List<Assembly> GetModAssemblies(string modsPath, AssemblyLoadContext ctx) {
         List<Assembly> ret = new();
+
         foreach (string dir in Directory.GetDirectories(modsPath)) {
             string name = Path.GetFileName(dir);
 
@@ -188,8 +167,10 @@ public static class Program {
 
     private static Dictionary<Type, object> CreateRewriterInstances() {
         Dictionary<Type, object> ret = new();
+
         foreach (Assembly asm in mods) {
             var rewriters = asm.GetTypes().Where(t => t.GetInterfaces().Contains(typeof(IModuleRewriter)));
+
             foreach (Type rewriter in rewriters) {
                 ret.Add(rewriter, Activator.CreateInstance(rewriter)!);
             }
@@ -205,9 +186,10 @@ public static class Program {
         }
 
         bool rewroteAny = false;
+
         foreach (var (type, instance) in rewriters) {
             bool rewrote = (bool)type.GetMethod("RewriteModule")!
-                .Invoke(instance, new object[] { md })!;
+                                     .Invoke(instance, new object[] { md })!;
 
             if (rewrote)
                 rewroteAny = true;
@@ -219,27 +201,56 @@ public static class Program {
     internal static void Main(string[] args) {
         Console.WriteLine("Welcome to push!");
 
-        if (!Directory.Exists(modsPath))
-            Directory.CreateDirectory(modsPath);
+        var platform = GetPlatform();
+        if (platform is null)
+            throw new PlatformNotSupportedException("Unknown or unsupported platform!");
+        
+        Console.WriteLine($"Using platform '{platform.GetType().Name}' ({platform.GetType().FullName}).");
+        var storagePath = platform.GetSaveDirectory("push");
+        var modsPath = Path.Combine(storagePath, "mods");
+        Console.WriteLine($"Using storage path: '{storagePath}'.");
+        Console.WriteLine($"Using mods path: '{modsPath}'.");
 
-        if (OperatingSystem.IsWindows())
-            osuDllPath = WindowsPath();
-        else if (OperatingSystem.IsMacOS())
-            osuDllPath = MacPath();
-        else if (OperatingSystem.IsLinux())
-            osuDllPath = LinuxPath();
-        else
-            throw new System.NotImplementedException();
-        osuRoot = Directory.GetParent(osuDllPath)!.ToString();
+        Directory.CreateDirectory(storagePath);
+        Directory.CreateDirectory(modsPath);
+        
+        Console.WriteLine("Attempting to locate game path...");
+        var gamePath = platform.LocateGamePath();
 
-        Console.WriteLine("Launching osu!.dll located at " + osuDllPath);
+        while (gamePath is null || !File.Exists(gamePath)) {
+            Console.WriteLine("Failed to locate game path. Please enter the path to your osu!.dll:");
+            gamePath = Console.ReadLine();
+            
+            // In case someone passes a directory when prompted instead...
+            if (Directory.Exists(gamePath))
+                gamePath = Path.Combine(gamePath, "osu!.dll");
+        }
 
-        OsuAlc alc = new();
+        var gameRoot = Path.GetDirectoryName(gamePath)!;
+
+        Console.WriteLine("Located game path: " + gamePath);
+        Console.WriteLine("Located game root: " + gameRoot);
+
+        // TODO
+        /*OsuAlc alc = new();
 
         mods = GetModAssemblies(modsPath, alc);
         rewriters = CreateRewriterInstances();
 
         osuDesktopAssembly = alc.LoadFromAssemblyPath(osuDllPath);
-        osuDesktopAssembly.GetType("osu.Desktop.Program")!.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!.Invoke(null, new object[] { args });
+        osuDesktopAssembly.GetType("osu.Desktop.Program")!.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!.Invoke(null, new object[] { args });*/
+    }
+
+    private static IPlatform? GetPlatform() {
+        if (OperatingSystem.IsWindows())
+            return new WindowsPlatform();
+
+        if (OperatingSystem.IsMacOS())
+            return new MacPlatform();
+
+        if (OperatingSystem.IsLinux())
+            return new LinuxPlatform();
+
+        return null;
     }
 }
