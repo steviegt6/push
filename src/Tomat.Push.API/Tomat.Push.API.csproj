@@ -7,6 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="MedallionTopologicalSort" Version="1.0.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="7.0.0" />
         <PackageReference Include="MonoMod.RuntimeDetour" Version="25.0.0" />
     </ItemGroup>
 
