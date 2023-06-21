@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using Tomat.Push.API.Loader;
 using Tomat.Push.API.Platform;
@@ -9,6 +10,9 @@ using Tomat.Push.API.Platform.Linux;
 using Tomat.Push.API.Platform.Mac;
 using Tomat.Push.API.Platform.Windows;
 using Tomat.Push.Launcher.Loader;
+
+// GameWriter exposes an internal field to osu.Game.
+[assembly: InternalsVisibleTo("osu.Game")]
 
 namespace Tomat.Push.Launcher;
 

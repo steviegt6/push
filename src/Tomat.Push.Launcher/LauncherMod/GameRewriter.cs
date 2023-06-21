@@ -9,8 +9,8 @@ using Tomat.Push.API;
 
 namespace Tomat.Push.Launcher.LauncherMod;
 
-public sealed class GameWriter : IModuleRewriter {
-    private static Version? osuVersion;
+public sealed class GameRewriter : IModuleRewriter {
+    internal static Version? osuVersion;
 
     bool IModuleRewriter.RewriteModule(ModuleDefinition module) {
         if (module.Assembly.Name.Name == "osu!") {
@@ -25,13 +25,9 @@ public sealed class GameWriter : IModuleRewriter {
         var getAsmVersion = osuGameBase.GetMethods().First(x => x.Name == "get_AssemblyVersion");
         var il = new ILContext(getAsmVersion);
         var c = new ILCursor(il);
-        c.Emit(OpCodes.Call, typeof(GameWriter).GetMethod("GetDesktopVersion", BindingFlags.Public | BindingFlags.Static)!);
+        c.Emit(OpCodes.Ldsfld, typeof(GameRewriter).GetField(nameof(osuVersion), BindingFlags.Static | BindingFlags.NonPublic)!);
         c.Emit(OpCodes.Ret);
 
         return true;
-    }
-
-    public static Version GetDesktopVersion() {
-        return osuVersion ?? new Version(0, 0, 0, 0);
     }
 }
