@@ -8,7 +8,7 @@ namespace Tomat.Push.ExampleMod;
 
 public class ModuleRewriter : IModuleRewriter {
     public bool RewriteModule(ModuleDefinition module) {
-        if (module.Name != "osu.Game")
+        if (module.Assembly.Name.Name != "osu.Game")
             return false;
 
         Console.WriteLine("[push ExampleMod] Rewriting module " + module);
