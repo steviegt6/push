@@ -16,6 +16,13 @@ public sealed class ModAssemblyLoadContext : AssemblyLoadContext {
         if (loaderAttempt is not null)
             return loaderAttempt;
 
+        try {
+            return Default.LoadFromAssemblyName(assemblyName);
+        }
+        catch {
+            // ignore
+        }
+
         return base.Load(assemblyName);
     }
 }
