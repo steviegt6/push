@@ -69,7 +69,7 @@ public static class ModOrganizer {
             if (!File.Exists(modDll))
                 continue;
 
-            var modLoadContext = new ModAssemblyLoadContext(modName);
+            var modLoadContext = new ModAssemblyLoadContext(modName, loaderResolver);
             var assembly = modLoadContext.LoadFromAssemblyPath(modDll);
             var resolver = new AssemblyResolver(modLoadContext, assembly, directory);
             resolver.AddDependency(loaderResolver);

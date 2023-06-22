@@ -1,12 +1,21 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using System.Runtime.Loader;
 
 namespace Tomat.Push.API.Loader;
 
 public sealed class ModAssemblyLoadContext : AssemblyLoadContext {
-    internal ModAssemblyLoadContext(string name) : base(name) { }
+    private readonly AssemblyResolver loaderResolver;
+
+    internal ModAssemblyLoadContext(string name, AssemblyResolver loaderResolver) : base(name) {
+        this.loaderResolver = loaderResolver;
+    }
 
     protected override Assembly? Load(AssemblyName assemblyName) {
+        var loaderAttempt = loaderResolver.ResolveAssembly(assemblyName);
+        if (loaderAttempt is not null)
+            return loaderAttempt;
+
         return base.Load(assemblyName);
     }
 }

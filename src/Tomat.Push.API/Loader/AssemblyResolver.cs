@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -25,6 +26,10 @@ public sealed class AssemblyResolver : IDisposable {
 
     public void AddDependency(AssemblyResolver dependency) {
         dependencies.Add(dependency);
+    }
+
+    public Assembly? ResolveAssembly(AssemblyName assemblyName) {
+        return ResolveAssembly(loadContext, assemblyName);
     }
 
     private Assembly? ResolveAssembly(AssemblyLoadContext alc, AssemblyName assemblyName) {
@@ -58,7 +63,7 @@ public sealed class AssemblyResolver : IDisposable {
             library.Serviceable
         );
         resolver.TryResolveAssemblyPaths(wrapper, assemblies);
-        return assemblies.Count != 0 ? alc.LoadFromAssemblyPath(assemblies[0]) : null;
+        return assemblies.Count != 0 ? alc.LoadFromAssemblyPath(assemblies.First(x => Path.GetFileNameWithoutExtension(x) == assemblyName.Name)) : null;
     }
 
     public void Dispose() {
